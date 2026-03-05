@@ -31,7 +31,7 @@ go run . serve -d my-site.meow -h localhost:3000
 ```
 - `-d`: The domain to register (e.g., `my-site.meow`).
 - `-h`: The local target host and port (default: `localhost:3000`).
-- `-s`: The PuffNet WebSocket server URL (default: `ws://ssh.byteptr.xyz:8008/ws`).
+- `-s`: The PuffNet WebSocket server URL (default: `wss://puff.vapma.wtf:443/ws`).
 
 ### `get`
 Fetch a resource from a registered tunnel.
@@ -39,7 +39,7 @@ Fetch a resource from a registered tunnel.
 go run . get my-site.meow/index.html
 ```
 - Supports paths in the domain string (e.g., `domain.meow/api/v1`).
-- Uses the default server `wss://puff.vapma.wtf/ws` unless overridden with `-s`.
+- Uses the default server `wss://puff.vapma.wtf:443/ws` unless overridden with `-s`.
 
 ### `post`
 Send a POST request to a registered tunnel.

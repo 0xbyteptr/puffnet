@@ -13,7 +13,7 @@ import (
 
 func runPost() {
 	postCmd := flag.NewFlagSet("post", flag.ExitOnError)
-	server := postCmd.String("s", "ws://ssh.byteptr.xyz:8008/ws", "PuffNet WS server")
+	server := postCmd.String("s", "wss://puff.vapma.wtf:443/ws", "PuffNet WS server")
 	body := postCmd.String("d", "", "POST body")
 	postCmd.Parse(os.Args[2:])
 

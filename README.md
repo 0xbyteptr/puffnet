@@ -39,7 +39,7 @@ Fetch a resource from a registered tunnel.
 go run . get my-site.meow/index.html
 ```
 - Supports paths in the domain string (e.g., `domain.meow/api/v1`).
-- Uses the default server `ws://ssh.byteptr.xyz:8008/ws` unless overridden with `-s`.
+- Uses the default server `wss://puff.vapma.wtf/ws` unless overridden with `-s`.
 
 ### `post`
 Send a POST request to a registered tunnel.

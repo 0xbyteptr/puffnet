@@ -41,6 +41,8 @@ type Tunnel struct {
 type WSMessage struct {
 	Type      string `json:"type"`
 	Domain    string `json:"domain"`
+	Path      string `json:"path,omitempty"`
+	Body      string `json:"body,omitempty"`
 	PublicKey string `json:"public_key,omitempty"`
 	Signature string `json:"signature,omitempty"`
 }
@@ -89,9 +91,10 @@ func saveOwnership() {
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Incoming WS connection from %s (Method: %s, Headers: %v)", r.RemoteAddr, r.Method, r.Header)
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("WS upgrade error:", err)
+		log.Printf("WS upgrade error from %s: %v", r.RemoteAddr, err)
 		return
 	}
 	defer conn.Close()
@@ -132,8 +135,11 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 		var msg WSMessage
 		if err := json.Unmarshal(rawMsg, &msg); err != nil {
+			log.Printf("Failed to unmarshal text message from %s: %v", r.RemoteAddr, err)
 			continue
 		}
+
+		log.Printf("Received message type '%s' from %s", msg.Type, r.RemoteAddr)
 
 		switch msg.Type {
 		case "register":
@@ -182,12 +188,14 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Tunnel registered and verified: %s\n", msg.Domain)
 
 		case "fetch":
-			handleFetch(conn, msg.Domain)
+			handleFetch(conn, msg.Domain, msg.Path)
+		case "post":
+			handlePost(conn, msg.Domain, msg.Path, msg.Body)
 		}
 	}
 }
 
-func handleFetch(conn *websocket.Conn, domain string) {
+func handlePost(conn *websocket.Conn, domain string, path string, body string) {
 	tunnelsMu.RLock()
 	tunnel, ok := tunnels[domain]
 	tunnelsMu.RUnlock()
@@ -197,6 +205,58 @@ func handleFetch(conn *websocket.Conn, domain string) {
 		out, _ := json.Marshal(resp)
 		conn.WriteMessage(websocket.BinaryMessage, out)
 		return
+	}
+
+	if path == "" {
+		path = "/"
+	}
+
+	reqID := uuid.New().String()
+	respCh := make(chan *ProxyResponse, 1)
+
+	tunnel.Mu.Lock()
+	tunnel.Responses[reqID] = respCh
+	tunnel.Mu.Unlock()
+
+	req := ProxyRequest{
+		ID:     reqID,
+		Method: "POST",
+		Path:   path,
+		Body:   []byte(body),
+	}
+
+	data, _ := json.Marshal(req)
+	tunnel.Mu.Lock()
+	err := tunnel.Conn.WriteMessage(websocket.BinaryMessage, data)
+	tunnel.Mu.Unlock()
+
+	if err != nil {
+		resp := ProxyResponse{Status: 502, Body: []byte("Tunnel write error")}
+		out, _ := json.Marshal(resp)
+		conn.WriteMessage(websocket.BinaryMessage, out)
+		return
+	}
+
+	resp := <-respCh
+	out, _ := json.Marshal(resp)
+	conn.WriteMessage(websocket.BinaryMessage, out)
+	log.Printf("Proxying post for %s complete\n", domain)
+}
+
+func handleFetch(conn *websocket.Conn, domain string, path string) {
+	tunnelsMu.RLock()
+	tunnel, ok := tunnels[domain]
+	tunnelsMu.RUnlock()
+
+	if !ok {
+		resp := ProxyResponse{Status: 404, Body: []byte("No tunnel for " + domain)}
+		out, _ := json.Marshal(resp)
+		conn.WriteMessage(websocket.BinaryMessage, out)
+		return
+	}
+
+	if path == "" {
+		path = "/"
 	}
 
 	reqID := uuid.New().String()
@@ -209,7 +269,7 @@ func handleFetch(conn *websocket.Conn, domain string) {
 	req := ProxyRequest{
 		ID:     reqID,
 		Method: "GET",
-		Path:   "/",
+		Path:   path,
 	}
 
 	data, _ := json.Marshal(req)

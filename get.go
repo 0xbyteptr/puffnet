@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -13,16 +14,25 @@ import (
 
 func runGet() {
 	getCmd := flag.NewFlagSet("get", flag.ExitOnError)
-	server := getCmd.String("s", "wss://puff.vapma.wtf:8008/ws", "PuffNet WebSocket server")
+	server := getCmd.String("s", "wss://puff.vapma.wtf:443/ws", "PuffNet WebSocket server")
 	getCmd.Parse(os.Args[2:])
 
 	if getCmd.NArg() < 1 {
 		log.Fatal("Usage: puffctl get domain.tld [-s ws://host:port]")
 	}
-	domain := getCmd.Arg(0)
+	domainArg := getCmd.Arg(0)
+	domain := domainArg
+	path := "/"
+	if i := strings.Index(domainArg, "/"); i != -1 {
+		domain = domainArg[:i]
+		path = domainArg[i:]
+	}
 
-	conn, _, err := websocket.DefaultDialer.Dial(*server, nil)
+	conn, dialResp, err := websocket.DefaultDialer.Dial(*server, nil)
 	if err != nil {
+		if dialResp != nil {
+			log.Fatalf("WS dial error: %v (Status: %s)", err, dialResp.Status)
+		}
 		log.Fatal("WS dial error:", err)
 	}
 	// Ensure we send a close message before exiting to avoid "abnormal closure" on host
@@ -33,9 +43,10 @@ func runGet() {
 	}()
 
 	// Request info via fetch
-	req := map[string]string{
-		"type":   "fetch",
-		"domain": domain,
+	req := WSMessage{
+		Type:   "fetch",
+		Domain: domain,
+		Path:   path,
 	}
 	data, _ := json.Marshal(req)
 	if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {

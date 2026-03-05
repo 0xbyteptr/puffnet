@@ -17,7 +17,7 @@ func runServe() {
 	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
 	domain := serveCmd.String("d", "", "public domain")
 	target := serveCmd.String("h", "localhost:3000", "local host:port")
-	server := serveCmd.String("s", "wss://puff.vapma.wtf:8008/ws", "puff host websocket")
+	server := serveCmd.String("s", "wss://puff.vapma.wtf:443/ws", "puff host websocket")
 	serveCmd.Parse(os.Args[2:])
 
 	if *domain == "" {

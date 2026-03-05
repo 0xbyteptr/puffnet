@@ -1,4 +1,0 @@
-2026/03/05 08:38:12 PuffNet Host on :8008
-2026/03/05 08:38:13 Incoming WS connection from [::1]:50776 (Method: GET, Headers: map[Connection:[Upgrade] Sec-Websocket-Key:[9UeZUXobpOKDm7163SxQ+w==] Sec-Websocket-Version:[13] Upgrade:[websocket] User-Agent:[Go-http-client/1.1]])
-2026/03/05 08:38:13 Received message type 'register' from [::1]:50776
-2026/03/05 08:38:13 Tunnel registered and verified: anime.meow
